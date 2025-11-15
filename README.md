@@ -42,26 +42,24 @@ At a high level, training looks like this:
 
 ## Diagram (Federated LoRA)
 
-This diagram renders properly on GitHub.
-
 ```mermaid
 flowchart LR
 
 subgraph SERVER
-    SBase[Base Transformer<br/>(frozen)]
-    SLoRA[Global LoRA Weights]
+    SBase["Base Transformer (frozen)"]
+    SLoRA["Global LoRA Weights"]
 end
 
-subgraph CLIENT_1
-    C1Base[Base Transformer<br/>(frozen)]
-    C1LoRA[Local LoRA Weights]
-    C1Data[(Local Data D1)]
+subgraph CLIENT1
+    C1Base["Base Transformer (frozen)"]
+    C1LoRA["Local LoRA Weights"]
+    C1Data["Local Data D1"]
 end
 
-subgraph CLIENT_2
-    C2Base[Base Transformer<br/>(frozen)]
-    C2LoRA[Local LoRA Weights]
-    C2Data[(Local Data D2)]
+subgraph CLIENT2
+    C2Base["Base Transformer (frozen)"]
+    C2LoRA["Local LoRA Weights"]
+    C2Data["Local Data D2"]
 end
 
 SLoRA -->|broadcast| C1LoRA
@@ -72,4 +70,6 @@ C2LoRA -->|local train| C2LoRA
 
 C1LoRA -->|update| SLoRA
 C2LoRA -->|update| SLoRA
+
+
 
