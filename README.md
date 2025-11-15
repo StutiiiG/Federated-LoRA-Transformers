@@ -1,74 +1,80 @@
-# Federated LoRA: Parameter-Efficient Federated Fine-Tuning of LLMs
 
-> Federated fine-tuning of large language models (LLMs) using LoRA adapters, with heterogeneous clients, Dirichlet data splits, and centralized aggregation of adapter weights only.
+# Federated LoRA on Transformer Models
 
-[![Python](https://img.shields.io/badge/python-3.10+-blue.svg)]()
-[![PyTorch](https://img.shields.io/badge/pytorch-2.x-red.svg)]()
-[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)]()
+> Federated fine-tuning of a Transformer model using LoRA adapters, with multiple simulated clients and aggregation of adapter weights only.
 
----
-
-## 🧩 Overview
-
-This repository implements a **federated learning framework for LoRA-based fine-tuning of LLMs**.  
-Multiple clients fine-tune **only LoRA adapters** on their private data, while a central server **aggregates the adapter weights**, never seeing any raw data.
-
-The default experiments use:
-
-- **Base model:** BLOOM / BLOOMZ or LLaMA-2 (Hugging Face)
-- **Task:** Text classification (e.g., SST-2)
-- **Federation:** Simulated clients with **Dirichlet data partitioning**
-- **PEFT:** [LoRA](https://arxiv.org/abs/2106.09685) with varying ranks (e.g., `r = 16, 64, 256`)
-
-The goal is to explore:
-
-- How well LoRA works in a **federated, non-IID** setting
-- Trade-offs between **LoRA rank vs. communication cost vs. accuracy**
-- Practical tricks for running federated LLM experiments on **limited GPU budgets**
+This repo contains a single Jupyter notebook that implements a **federated learning setup for LoRA**:
+- A base Transformer model (from Hugging Face)
+- Multiple **simulated clients** with their own local data
+- Each client fine-tunes only **LoRA parameters**
+- A central server that **aggregates LoRA weights** (no raw data is shared)
 
 ---
 
-## 📚 Table of Contents
+## 🧩 Project Overview
 
-1. [Repository Structure](#-repository-structure)  
-2. [Model & Training Architecture](#-model--training-architecture)  
-3. [Installation](#-installation)  
-4. [Quickstart](#-quickstart)  
-5. [Configuration](#-configuration)  
-6. [Running Experiments](#-running-experiments)  
-7. [Logging & Monitoring](#-logging--monitoring)  
-8. [Results](#-results)  
-9. [Extending the Project](#-extending-the-project)  
-10. [Limitations & Future Work](#-limitations--future-work)  
-11. [Citing](#-citing)  
-12. [License](#-license)
+The goal of this project is to explore:
+
+- How **parameter-efficient fine-tuning (LoRA)** behaves in a **federated, non-IID** setting  
+- The trade-offs between **LoRA rank vs. accuracy vs. communication cost**  
+- How to run LLM-style experiments on a **single GPU / limited compute** by only training small adapter modules
+
+All the code lives in a single notebook:
+
+- `FL_Lora.ipynb` – complete experiment pipeline (data loading, client splits, LoRA setup, federated rounds, evaluation)
 
 ---
 
-## 🗂 Repository Structure
+## 🏗 Model & Training Architecture
 
-```text
-federated-lora/
-├── configs/
-│   ├── bloom_sst2_base.yaml
-│   ├── bloom_sst2_fed.yaml
-│   └── llama2_sst2_fed.yaml
-├── data/
-│   └── (downloaded datasets / cached HF datasets)
-├── federated/
-│   ├── client.py           # Client training loop (local LoRA updates)
-│   ├── server.py           # Aggregation logic (FedAvg / weighted avg)
-│   ├── partition.py        # Dirichlet data partitioning utilities
-│   └── utils.py
-├── models/
-│   ├── lora_wrapper.py     # PEFT / LoRA integration
-│   └── tokenizer_utils.py
-├── scripts/
-│   ├── run_single_lora.py  # Baseline (non-federated) LoRA fine-tuning
-│   ├── run_federated.py    # Full federated LoRA training script
-│   └── evaluate.py         # Centralized evaluation script
-├── notebooks/
-│   └── exploration.ipynb   # EDA & quick checks
-├── requirements.txt
-├── README.md
-└── LICENSE
+At a high level, training looks like this:
+
+1. **Server** initializes the base Transformer and a LoRA adapter.
+2. Data is **split across clients** (you can control the number of clients and how skewed the data is).
+3. For each federated round:
+   - The server **broadcasts** the current LoRA weights to each client.
+   - Each client:
+     - Loads the base model (kept **frozen**) + LoRA adapter
+     - Trains on its **local dataset** (only LoRA parameters update)
+     - Sends updated LoRA weights back
+   - The server **aggregates** the LoRA weights (FedAvg-style).
+4. The server periodically evaluates the global adapter on a validation/test set.
+
+### Diagram (Federated LoRA)
+
+```mermaid
+flowchart LR
+    subgraph Server
+        S_Base[Base Transformer (frozen)]
+        S_LoRA[Global LoRA Weights]
+    end
+
+    subgraph Client1
+        C1_Base[Base Transformer (frozen)]
+        C1_LoRA[Local LoRA Weights]
+        C1_Data[(Local Data D1)]
+    end
+
+    subgraph Client2
+        C2_Base[Base Transformer (frozen)]
+        C2_LoRA[Local LoRA Weights]
+        C2_Data[(Local Data D2)]
+    end
+
+    subgraph ClientN
+        CN_Base[Base Transformer (frozen)]
+        CN_LoRA[Local LoRA Weights]
+        CN_Data[(Local Data DN)]
+    end
+
+    S_LoRA -->|broadcast LoRA| C1_LoRA
+    S_LoRA -->|broadcast LoRA| C2_LoRA
+    S_LoRA -->|broadcast LoRA| CN_LoRA
+
+    C1_LoRA -->|train on D1| C1_LoRA
+    C2_LoRA -->|train on D2| C2_LoRA
+    CN_LoRA -->|train on DN| CN_LoRA
+
+    C1_LoRA -->|send updates| S_LoRA
+    C2_LoRA -->|send updates| S_LoRA
+    CN_LoRA -->|send updates| S_LoRA
