@@ -3,7 +3,7 @@
 
 > Federated fine-tuning of a Transformer model using LoRA adapters, with multiple simulated clients and aggregation of adapter weights only.
 
-This repo contains a single Jupyter notebook that implements a **federated learning setup for LoRA**:
+This repo contains a **federated learning setup for LoRA**:
 - A base Transformer model (from Hugging Face)
 - Multiple **simulated clients** with their own local data
 - Each client fine-tunes only **LoRA parameters**
