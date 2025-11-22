@@ -38,7 +38,7 @@ At a high level, training looks like this:
    - The server **aggregates** the LoRA weights (FedAvg-style).
 4. The server periodically evaluates the global adapter on a validation/test set.
 
-## Diagram (Federated LoRA)
+## Federated LoRA Architecture 
 
 ```mermaid
 flowchart LR
