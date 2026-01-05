@@ -1,1 +1,5 @@
+num_clients: 4
+num_rounds: 2
+client_frac: 1.0
+seed: 42
 
