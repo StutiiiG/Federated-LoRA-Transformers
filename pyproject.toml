@@ -1,11 +1,18 @@
 [project]
-name = "fl-lora"
+name = "fedlora"
 version = "0.1.0"
-description = "Federated LoRA training utilities and experiment scripts"
+description = "Federated LoRA finetuning for Transformers with reproducible experiments (SST-2) and cost/communication metrics."
 requires-python = ">=3.10"
 dependencies = [
   "numpy",
+  "pandas",
   "pyyaml",
+  "scikit-learn",
+  "torch",
+  "transformers>=4.40.0",
+  "datasets",
+  "peft",
+  "accelerate",
 ]
 
 [project.optional-dependencies]
