@@ -1,28 +1,30 @@
 from __future__ import annotations
-import numpy as np
+from typing import Dict, List
+import torch
 
-def fedavg(weights: list[np.ndarray], client_sizes: list[int]) -> np.ndarray:
-    """
-    Weighted average of client parameter vectors.
-    weights: list of 1D arrays of same shape
-    client_sizes: number of samples per client (weights for averaging)
-    """
-    if len(weights) == 0:
-        raise ValueError("weights is empty")
-    if len(weights) != len(client_sizes):
-        raise ValueError("weights and client_sizes must have same length")
-
-    total = sum(client_sizes)
+def weighted_average_state(states: List[Dict[str, torch.Tensor]], weights: List[int]) -> Dict[str, torch.Tensor]:
+    if len(states) == 0:
+        raise ValueError("No states to aggregate")
+    if len(states) != len(weights):
+        raise ValueError("states and weights length mismatch")
+    total = sum(weights)
     if total <= 0:
-        raise ValueError("total client size must be > 0")
+        raise ValueError("total weight must be > 0")
 
-    w0_shape = weights[0].shape
-    if any(w.shape != w0_shape for w in weights):
-        raise ValueError("all weight arrays must have the same shape")
+    keys = states[0].keys()
+    out = {}
+    for k in keys:
+        acc = None
+        for sd, w in zip(states, weights):
+            t = sd[k].to(torch.float64)
+            acc = t * (w / total) if acc is None else acc + t * (w / total)
+        out[k] = acc.to(states[0][k].dtype)
+    return out
 
-    acc = np.zeros_like(weights[0], dtype=np.float64)
-    for w, n in zip(weights, client_sizes):
-        acc += (n / total) * w.astype(np.float64)
+def apply_state_to_model(model, trainable_state: Dict[str, torch.Tensor]) -> None:
+    with torch.no_grad():
+        for name, p in model.named_parameters():
+            if p.requires_grad and name in trainable_state:
+                p.copy_(trainable_state[name].to(p.device))
 
-    return acc.astype(weights[0].dtype)
 
