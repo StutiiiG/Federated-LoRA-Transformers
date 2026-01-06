@@ -1,1 +1,36 @@
+method: feddual_lora
+model_name: bigscience/bloomz-560m
+seed: 42
+
+dataset_name: glue
+dataset_config: sst2
+max_length: 128
+dirichlet_alpha: 0.1
+num_clients: 10
+tiny: false
+tiny_train_per_client: 0
+tiny_eval_size: 0
+
+rounds: 10
+client_fraction: 0.5
+local_steps: 100
+batch_size: 8
+
+lr: 2.0e-4
+weight_decay: 0.0
+
+prox_mu: 0.01
+
+dual_beta_mode: adaptive
+dual_beta_fixed: 0.3
+dual_beta_k: 12.0
+dual_agg_mode: dynamic
+dual_agg_temp: 0.15
+
+lora_r: 16
+lora_alpha: 32
+lora_dropout: 0.05
+lora_target_modules: ["query_key_value", "dense"]
+
+out_dir: results/sst2_feddual_lora
 
